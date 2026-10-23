@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: Apache-2.0
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      ZSDK_VER: "1.0.1"
+      ZSDK_BASE_URL: https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v1.0.1
+      ZSDK_MINIMAL_SHA256: ca9bc0ff66fafca1dac9d592a36d953cf16d096a9d09b1c0357f021cf9f6a7eb
+      ZSDK_AARCH64_SHA256: 01c0cfe1daaab2d2a0f71165f11a066d983ef97e51c4a3753186afa6ae55c24b
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: zephyr-virtio-can
+      - name: Host packages
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends ninja-build gperf device-tree-compiler \
+            qemu-system-arm python3-venv xz-utils
+      - name: Zephyr SDK (minimal + aarch64), checksums pinned
+        run: |
+          cd /opt
+          sudo wget -q $ZSDK_BASE_URL/zephyr-sdk-${ZSDK_VER}_linux-x86_64_minimal.tar.xz
+          sudo wget -q $ZSDK_BASE_URL/toolchain_gnu_linux-x86_64_aarch64-zephyr-elf.tar.xz
+          echo "$ZSDK_MINIMAL_SHA256  zephyr-sdk-${ZSDK_VER}_linux-x86_64_minimal.tar.xz" | sha256sum -c
+          echo "$ZSDK_AARCH64_SHA256  toolchain_gnu_linux-x86_64_aarch64-zephyr-elf.tar.xz" | sha256sum -c
+          sudo tar xf zephyr-sdk-${ZSDK_VER}_linux-x86_64_minimal.tar.xz
+          sudo mkdir -p zephyr-sdk-${ZSDK_VER}/gnu
+          sudo tar xf toolchain_gnu_linux-x86_64_aarch64-zephyr-elf.tar.xz -C zephyr-sdk-${ZSDK_VER}/gnu
+          echo "ZEPHYR_SDK_INSTALL_DIR=/opt/zephyr-sdk-${ZSDK_VER}" >> $GITHUB_ENV
+      - name: West workspace (Zephyr v4.4.1)
+        run: |
+          python3 -m venv .venv && . .venv/bin/activate
+          pip install -q west
+          west init -l zephyr-virtio-can
+          west update --narrow -o=--depth=1
+          pip install -q -r zephyr/scripts/requirements-base.txt -r zephyr/scripts/requirements-build-test.txt -r zephyr/scripts/requirements-run-test.txt
+          echo "$PWD/.venv/bin" >> $GITHUB_PATH
+      - name: Unit tests (fake virtio transport, qemu_cortex_a53)
+        run: |
+          zephyr/scripts/twister -T zephyr-virtio-can/tests -p qemu_cortex_a53 --inline-logs -v
+      - name: Build the Xen self-test sample (xenvm)
+        run: |
+          zephyr/scripts/twister -T zephyr-virtio-can/samples -p xenvm --build-only --inline-logs -v

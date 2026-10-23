@@ -1,0 +1,19 @@
+common:
+  tags:
+    - drivers
+    - can
+    - virtio
+  platform_allow:
+    - qemu_cortex_a53
+  integration_platforms:
+    - qemu_cortex_a53
+tests:
+  drivers.can.virtio:
+    extra_configs:
+      - CONFIG_CAN_FD_MODE=n
+  drivers.can.virtio.fd:
+    extra_configs:
+      - CONFIG_CAN_FD_MODE=y
+  drivers.can.virtio.no_rtr:
+    extra_configs:
+      - CONFIG_CAN_ACCEPT_RTR=n

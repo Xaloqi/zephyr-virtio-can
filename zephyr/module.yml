@@ -4,3 +4,7 @@ build:
   kconfig: Kconfig
   settings:
     dts_root: .
+tests:
+  - tests
+samples:
+  - samples

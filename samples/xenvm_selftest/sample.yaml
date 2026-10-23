@@ -1,0 +1,13 @@
+sample:
+  name: virtio-can self-test against a real device (Xen DomU)
+common:
+  tags:
+    - can
+    - virtio
+  platform_allow:
+    - xenvm
+  integration_platforms:
+    - xenvm
+tests:
+  sample.can.virtio.xenvm_selftest:
+    build_only: true

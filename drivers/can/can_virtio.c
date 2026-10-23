@@ -151,6 +151,7 @@ struct can_virtio_data {
 	struct k_sem ctrl_done;
 	uint16_t ctrl_out; /* le16 msg_type, device-readable */
 	uint8_t ctrl_in;   /* u8 result, device-writable */
+	bool ctrl_inflight; /* a timed-out request still owns ctrl_out/ctrl_in */
 };
 
 static uint16_t can_virtio_read_status(const struct device *dev)
@@ -370,7 +371,7 @@ static bool can_virtio_rx_to_frame(struct can_virtio_data *data,
 	uint32_t flags = sys_le32_to_cpu(in->hdr.flags);
 	uint32_t can_id = sys_le32_to_cpu(in->hdr.can_id);
 	uint16_t length = sys_le16_to_cpu(in->hdr.length);
-	uint16_t max_len = CAN_MAX_DLEN;
+	uint16_t max_len = 8U; /* classic CAN, whatever CAN_MAX_DLEN is with CONFIG_CAN_FD_MODE */
 
 	if (used_len < sizeof(in->hdr) || sys_le16_to_cpu(in->hdr.msg_type) != VIRTIO_CAN_RX) {
 		LOG_WRN("RX: malformed buffer (len %u, type 0x%04x)", used_len,
@@ -392,7 +393,7 @@ static bool can_virtio_rx_to_frame(struct can_virtio_data *data,
 			return false;
 		}
 		frame->flags |= CAN_FRAME_FDF;
-		max_len = CANFD_MAX_DLEN;
+		max_len = 64U;
 #else
 		return false;
 #endif
@@ -547,6 +548,20 @@ static int can_virtio_ctrl(const struct device *dev, uint16_t msg_type)
 
 	k_mutex_lock(&data->ctrl_mtx, K_FOREVER);
 
+	/*
+	 * A request that timed out is still on the queue and still owns the
+	 * buffers. Its completion gives ctrl_done; wait for it once more before
+	 * reusing them, and refuse if the device still does not answer.
+	 */
+	if (data->ctrl_inflight) {
+		if (k_sem_take(&data->ctrl_done, K_MSEC(CONFIG_CAN_VIRTIO_CTRL_TIMEOUT_MS)) != 0) {
+			LOG_ERR("control queue: an earlier request is still unanswered");
+			ret = -EIO;
+			goto out;
+		}
+		data->ctrl_inflight = false;
+	}
+
 	struct virtq_buf bufs[] = {
 		{.addr = &data->ctrl_out, .len = sizeof(data->ctrl_out)},
 		{.addr = &data->ctrl_in, .len = sizeof(data->ctrl_in)},
@@ -568,6 +583,7 @@ static int can_virtio_ctrl(const struct device *dev, uint16_t msg_type)
 	if (k_sem_take(&data->ctrl_done, K_MSEC(CONFIG_CAN_VIRTIO_CTRL_TIMEOUT_MS)) != 0) {
 		/* The device is not answering; the request stays queued. */
 		LOG_ERR("control request 0x%04x: no answer from the device", msg_type);
+		data->ctrl_inflight = true;
 		ret = -EIO;
 		goto out;
 	}

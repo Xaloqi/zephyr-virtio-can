@@ -1,0 +1,11 @@
+/ {
+	fake_virtio: fake-virtio {
+		compatible = "xaloqi,fake-virtio";
+		status = "okay";
+
+		can_dut: virtio-can {
+			compatible = "virtio,device24";
+			status = "okay";
+		};
+	};
+};

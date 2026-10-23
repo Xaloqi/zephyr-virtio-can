@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: Apache-2.0
+# Workspace for CI and local testing: Zephyr v4.4.1 (AGL SoDeV's pin), no extra modules.
+# As a module in your own workspace, you do not need this file.
+manifest:
+  remotes:
+    - name: zephyrproject
+      url-base: https://github.com/zephyrproject-rtos
+  projects:
+    - name: zephyr
+      remote: zephyrproject
+      revision: 1f6485eca25431b5ff27ce9a754218c9e559bbbb   # v4.4.1
+  self:
+    path: zephyr-virtio-can
