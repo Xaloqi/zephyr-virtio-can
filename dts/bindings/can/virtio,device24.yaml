@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 Xaloqi
+
+description: |
+  VIRTIO CAN device (device ID 36 = 0x24), a child of a virtio transport
+  node (virtio,mmio or virtio,pci). The compatible follows the
+  "virtio,device<hex id>" convention of Zephyr's virtio,device4 and the
+  Linux virtio DT binding.
+
+  The bitrate and sample-point properties are accepted for compatibility
+  with can-controller.yaml; the device side owns the bus timing and this
+  driver does not forward them.
+
+compatible: "virtio,device24"
+
+include: can-fd-controller.yaml

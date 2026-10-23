@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 Xaloqi
+
+config CAN_VIRTIO
+	bool "VIRTIO CAN device driver"
+	default y
+	depends on CAN
+	depends on VIRTIO
+	depends on DT_HAS_VIRTIO_DEVICE24_ENABLED
+	help
+	  Driver for the VIRTIO CAN device (device ID 36), as specified in
+	  VIRTIO 1.4, section "CAN Device". The CAN controller itself is owned
+	  by the device side (for example a driver domain under Xen); the
+	  bitrate is configured there, not by this driver.
+
+if CAN_VIRTIO
+
+config CAN_VIRTIO_TX_SLOTS
+	int "Number of CAN frames in flight on the transmit queue"
+	default 4
+	range 1 64
+	help
+	  Each slot uses two descriptors (request and result). The transmit
+	  virtqueue is sized to the next power of two of twice this value.
+
+config CAN_VIRTIO_RX_BUFFERS
+	int "Number of receive buffers kept on the receive queue"
+	default 16
+	range 1 256
+	help
+	  Rounded up to a power of two (the virtqueue size).
+
+config CAN_VIRTIO_MAX_FILTERS
+	int "Maximum number of concurrent RX filters"
+	default 16
+	range 1 1024
+	help
+	  Filtering is done in software against every received frame.
+
+config CAN_VIRTIO_CTRL_TIMEOUT_MS
+	int "Timeout for a control queue request (start/stop), in ms"
+	default 1000
+
+endif # CAN_VIRTIO

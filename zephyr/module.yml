@@ -1,0 +1,6 @@
+name: virtio-can
+build:
+  cmake: .
+  kconfig: Kconfig
+  settings:
+    dts_root: .
