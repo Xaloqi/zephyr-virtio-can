@@ -71,13 +71,17 @@ It needs `CONFIG_CAN=y`, `CONFIG_VIRTIO=y` and a heap
 - RX buffers always have room for a 64-byte sdu, even for classic CAN (about 0.9 KB of
   RAM). The specification allows 8, but rust-vmm's `vhost-device-can` writes 64 and
   stops servicing its queues when a buffer is shorter.
+- Not a driver issue, but you will meet it: `vhost-device-can` up to at least `c0bfee92`
+  loses RX buffers until RX stops, under load
+  ([rust-vmm/vhost-device#923](https://github.com/rust-vmm/vhost-device/issues/923)). The
+  open fix [#924](https://github.com/rust-vmm/vhost-device/pull/924) removed it in our runs.
 
 ## Tests
 
 | | Where | What |
 |---|---|---|
 | Unit | `tests/drivers/can/virtio` on `qemu_cortex_a53` | A fake virtio transport plays the device. Completions go through Zephyr's own `virtio_isr()` in ISR context. Covered: negotiation, RX population before DRIVER_OK, TX encoding (std/ext/0-byte/RTR/FD), TX errors and slot exhaustion, stop with pending TX, RX filters and malformed buffers, control-queue rejection and timeout, bus-off. Three variants: classic, CAN FD, RTR refused |
-| Integration | `samples/xenvm_selftest`, built for `xenvm` | Against a real device: [Zephyr-Reference-ECU](https://github.com/Xaloqi/Zephyr-Reference-ECU), branch `spike/virtio-can-frontend`, `xenvm/can-spike/`. That is Xen 4.22, with rust-vmm `vhost-device-can` behind `xen-vhost-frontend` in a driver domain. The same setup runs EDS answering UDS over ISO-TP through this driver |
+| Integration | `samples/xenvm_selftest`, built for `xenvm` | Against a real device: [Zephyr-Reference-ECU](https://github.com/Xaloqi/Zephyr-Reference-ECU) `xenvm/run.sh can` (one command, Docker only). That is Xen 4.22, with rust-vmm `vhost-device-can` behind `xen-vhost-frontend` in a driver domain, and EDS answering UDS over ISO-TP through this driver |
 
 ```
 west init -l zephyr-virtio-can && west update      # Zephyr v4.4.1, see west.yml
