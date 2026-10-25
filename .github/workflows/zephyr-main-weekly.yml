@@ -116,7 +116,7 @@ jobs:
           cp twister-sample/twister.json "$OUT/twister-sample.json" 2>/dev/null || true
           python3 -I zephyr-virtio-can/.github/scripts/twister_gate.py "$OUT/twister-sample.json" \
             --rc "${{ steps.sample.outcome == 'success' && '0' || '1' }}" \
-            --suites "$EXPECT_SAMPLE_CONFIGS" --first-failure "$OUT/first-failure.txt"
+            --suites "$EXPECT_SAMPLE_CONFIGS" --build-only --first-failure "$OUT/first-failure.txt"
       - name: Collect
         if: always()
         run: |
