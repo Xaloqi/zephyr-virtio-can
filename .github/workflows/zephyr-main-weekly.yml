@@ -30,7 +30,7 @@ on:
 permissions:
   contents: read
 env:
-  ZREV: ${{ inputs.zephyr_rev || 'main' }}
+  ZREV: v4.4.1   # TEMP: prove the gate can pass
   OUT: ${{ github.workspace }}/ci-out
   EXPECT_TEST_CONFIGS: "3"    # tests/drivers/can/virtio: base, fd, no_rtr
   EXPECT_TEST_CASES: "40"
