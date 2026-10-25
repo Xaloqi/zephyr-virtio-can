@@ -203,10 +203,10 @@ static void can_virtio_check_bus_off(const struct device *dev)
 	LOG_WRN("device reports bus-off");
 
 #ifdef CAN_VIRTIO_STATE_CB_LIST
-	/* TEMP run-014: fire call removed */
+	can_fire_state_change_callbacks(dev, CAN_STATE_BUS_OFF, err_cnt);
 #else
 	if (cb != NULL) {
-		/* TEMP run-014: cb call removed */ (void)cb;
+		cb(dev, CAN_STATE_BUS_OFF, err_cnt, data->common.state_change_cb_user_data);
 	}
 #endif
 }
