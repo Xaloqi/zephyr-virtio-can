@@ -100,7 +100,7 @@ jobs:
         run: |
           cp twister-tests/twister.json "$OUT/twister-tests.json" 2>/dev/null || true
           python3 -I zephyr-virtio-can/.github/scripts/twister_gate.py "$OUT/twister-tests.json" \
-            --rc "${{ steps.tests.outcome == 'success' && 0 || 1 }}" \
+            --rc "${{ steps.tests.outcome == 'success' && '0' || '1' }}" \
             --suites "$EXPECT_TEST_CONFIGS" --cases "$EXPECT_TEST_CASES" --first-failure "$OUT/first-failure.txt"
       - name: Build the Xen self-test sample (xenvm)
         id: sample
@@ -115,7 +115,7 @@ jobs:
         run: |
           cp twister-sample/twister.json "$OUT/twister-sample.json" 2>/dev/null || true
           python3 -I zephyr-virtio-can/.github/scripts/twister_gate.py "$OUT/twister-sample.json" \
-            --rc "${{ steps.sample.outcome == 'success' && 0 || 1 }}" \
+            --rc "${{ steps.sample.outcome == 'success' && '0' || '1' }}" \
             --suites "$EXPECT_SAMPLE_CONFIGS" --first-failure "$OUT/first-failure.txt"
       - name: Collect
         if: always()
