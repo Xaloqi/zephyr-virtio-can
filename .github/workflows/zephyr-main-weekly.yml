@@ -21,11 +21,16 @@ on:
   schedule:
     - cron: "43 4 * * 3"   # Wednesdays 04:43 UTC, off-peak, off the hour
   workflow_dispatch:
+    inputs:
+      zephyr_rev:
+        description: "Zephyr ref to test (default: main)"
+        default: main
   push:
     branches: [ci/zephyr-main-weekly]   # TEMP
 permissions:
   contents: read
 env:
+  ZREV: ${{ inputs.zephyr_rev || 'main' }}
   OUT: ${{ github.workspace }}/ci-out
   EXPECT_TEST_CONFIGS: "3"    # tests/drivers/can/virtio: base, fd, no_rtr
   EXPECT_TEST_CASES: "40"
@@ -52,16 +57,16 @@ jobs:
         run: |
           python3 -m venv .venv && . .venv/bin/activate
           pip install -q west
-          # Same manifest, Zephyr's revision overridden for this job only; west.yml is untouched.
-          sed 's|revision: 1f6485eca25431b5ff27ce9a754218c9e559bbbb.*|revision: main|' \
+          # Same manifest, Zephyr's revision overridden (main unless dispatched with another ref) for this job only; west.yml is untouched.
+          sed "s|revision: 1f6485eca25431b5ff27ce9a754218c9e559bbbb.*|revision: $ZREV|" \
             zephyr-virtio-can/west.yml > zephyr-virtio-can/west-main.yml
-          grep -q '^ *revision: main$' zephyr-virtio-can/west-main.yml || { echo "::error::revision override did not apply"; exit 1; }
+          grep -q "^ *revision: $ZREV\$" zephyr-virtio-can/west-main.yml || { echo "::error::revision override did not apply"; exit 1; }
           west init -l --mf west-main.yml zephyr-virtio-can
           west update --narrow -o=--depth=1
           SHA=$(git -C zephyr rev-parse HEAD)
           echo "$SHA" > "$OUT/sha.txt"
-          echo "Zephyr main: $SHA ($(git -C zephyr log -1 --format='%cs %s' | cut -c1-100))"
-          echo "### Zephyr main \`$SHA\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Zephyr $ZREV: $SHA ($(git -C zephyr log -1 --format='%cs %s' | cut -c1-100))"
+          echo "### Zephyr $ZREV \`$SHA\`" >> "$GITHUB_STEP_SUMMARY"
           pip install -q -r zephyr/scripts/requirements-base.txt -r zephyr/scripts/requirements-build-test.txt -r zephyr/scripts/requirements-run-test.txt
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       - name: Zephyr SDK (version from the tree, checksums from the release)
@@ -99,6 +104,7 @@ jobs:
             --suites "$EXPECT_TEST_CONFIGS" --cases "$EXPECT_TEST_CASES" --first-failure "$OUT/first-failure.txt"
       - name: Build the Xen self-test sample (xenvm)
         id: sample
+        if: always()
         continue-on-error: true
         run: |
           set -o pipefail
@@ -116,10 +122,10 @@ jobs:
         run: |
           [ "${{ job.status }}" = success ] && echo pass > "$OUT/result" || echo fail > "$OUT/result"
           # Last lines: of the log that failed, else of any log; plus the first compile error.
-          { grep -h -m1 -E "error:|Error:|FAILED" "$OUT"/twister-*.log 2>/dev/null | head -1 | sed 's/^/first error: /'
+          { grep -h -m1 -E "error:" "$OUT"/twister-*.log 2>/dev/null | head -1 | sed 's/^.*zephyr-virtio-can\/zephyr-virtio-can\///; s/^/first error: /'
             for f in "$OUT"/twister-sample.log "$OUT"/twister-tests.log; do [ -f "$f" ] && { echo "--- $(basename $f)"; tail -n 20 "$f"; }; done
           } > "$OUT/tail.txt"
-          [ -s "$OUT/first-failure.txt" ] || grep -h -m1 -E "error:|FAILED|Error" "$OUT"/twister-*.log > "$OUT/first-failure.txt" 2>/dev/null || true
+          [ -s "$OUT/first-failure.txt" ] || grep -h -m1 -E "error:|FAILED" "$OUT"/twister-*.log > "$OUT/first-failure.txt" 2>/dev/null || true
           cp zephyr-virtio-can/west-main.yml "$OUT/" 2>/dev/null || true
           find twister-tests twister-sample -name build.log -size -2M -exec sh -c 'for f; do d=$(echo "$f" | tr / _); cp "$f" "$OUT/$d"; done' _ {} + 2>/dev/null || true
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
