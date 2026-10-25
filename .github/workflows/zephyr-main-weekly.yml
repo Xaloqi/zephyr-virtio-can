@@ -25,8 +25,6 @@ on:
       zephyr_rev:
         description: "Zephyr ref to test (default: main)"
         default: main
-  push:
-    branches: [ci/zephyr-main-weekly]   # TEMP
 permissions:
   contents: read
 env:
@@ -140,7 +138,7 @@ jobs:
   # a manual dispatch only prints what it would do.
   report:
     needs: main
-    if: always() && (github.event_name != 'pull_request')
+    if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
