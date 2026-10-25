@@ -12,9 +12,12 @@ and reports are welcome.
 - **Specification:** OASIS VIRTIO 1.4, section "CAN Device"
   (`oasis-tcs/virtio-spec`, branch `virtio-1.4`, `device-types/can/description.tex`). The
   driver was written from that text.
-- **Zephyr:** v4.4.1. It is built on Zephyr's virtio framework (`virtio_mmio` /
-  `virtio_pci`, `virtqueue`).
-  CI gates on v4.4.1; a weekly job also builds and tests against Zephyr `main` ([![zephyr main weekly](https://github.com/Xaloqi/zephyr-virtio-can/actions/workflows/zephyr-main-weekly.yml/badge.svg)](https://github.com/Xaloqi/zephyr-virtio-can/actions/workflows/zephyr-main-weekly.yml)), report-only.
+- **Zephyr:** v4.4.x and 4.5 (`main`). It is built on Zephyr's virtio framework
+  (`virtio_mmio` / `virtio_pci`, `virtqueue`). One source supports both: Zephyr 4.5 reports
+  state changes through `can_add_state_change_callback()` and the driver follows it from
+  0.2.0. CI gates on v4.4.1 (`ci.yml`); a weekly job also builds and tests against Zephyr
+  `main` ([![zephyr main weekly](https://github.com/Xaloqi/zephyr-virtio-can/actions/workflows/zephyr-main-weekly.yml/badge.svg)](https://github.com/Xaloqi/zephyr-virtio-can/actions/workflows/zephyr-main-weekly.yml)),
+  report-only. 4.5.0 is a release candidate at the time of writing.
 - **Licence:** Apache-2.0.
 
 ## Use
