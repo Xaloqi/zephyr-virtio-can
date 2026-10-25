@@ -77,7 +77,7 @@ static int complete_tx(uint8_t result)
 	if (!fake_virtio_pop(vdev, QTX, &c)) {
 		return -1;
 	}
-	zassert_equal(c.n, 3, "TX chain must be request + result");
+	zassert_equal(c.n, 2, "TX chain must be request + result");
 	zassert_false(c.writable[0]);
 	zassert_true(c.writable[1]);
 	zassert_equal(c.len[1], 1);
