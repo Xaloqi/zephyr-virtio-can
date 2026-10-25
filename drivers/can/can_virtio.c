@@ -204,10 +204,9 @@ static void can_virtio_check_bus_off(const struct device *dev)
 
 #ifdef CAN_VIRTIO_STATE_CB_LIST
 	/* TEMP run-014: fire call removed */
-	(void)err_cnt;
 #else
 	if (cb != NULL) {
-		/* TEMP run-014: cb call removed */ (void)err_cnt;
+		/* TEMP run-014: cb call removed */ (void)cb;
 	}
 #endif
 }
