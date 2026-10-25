@@ -21,6 +21,8 @@ on:
   schedule:
     - cron: "43 4 * * 3"   # Wednesdays 04:43 UTC, off-peak, off the hour
   workflow_dispatch:
+  push:
+    branches: [ci/zephyr-main-weekly]   # TEMP
 permissions:
   contents: read
 env:
@@ -132,7 +134,7 @@ jobs:
   # a manual dispatch only prints what it would do.
   report:
     needs: main
-    if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    if: always() && (github.event_name != 'pull_request')
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
