@@ -31,6 +31,17 @@
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/sys_io.h>
 #include <zephyr/sys/util.h>
+#include <zephyr/version.h>
+
+/*
+ * Zephyr 4.5 replaced the single state change callback with a list
+ * (can_add_state_change_callback()). Drivers no longer implement
+ * .set_state_change_callback and report with can_fire_state_change_callbacks().
+ * ZEPHYR_VERSION_CODE ignores the rc suffix, so 4.5.0-rcN already counts as 4.5.
+ */
+#if ZEPHYR_VERSION_CODE >= ZEPHYR_VERSION(4, 5, 0)
+#define CAN_VIRTIO_STATE_CB_LIST 1
+#endif
 
 LOG_MODULE_REGISTER(can_virtio, CONFIG_CAN_LOG_LEVEL);
 
@@ -175,7 +186,9 @@ static void can_virtio_check_bus_off(const struct device *dev)
 {
 	struct can_virtio_data *data = dev->data;
 	struct can_bus_err_cnt err_cnt = {0};
+#ifndef CAN_VIRTIO_STATE_CB_LIST
 	can_state_change_callback_t cb = data->common.state_change_cb;
+#endif
 
 	if ((can_virtio_read_status(dev) & VIRTIO_CAN_S_CTRL_BUSOFF) == 0U) {
 		return;
@@ -189,9 +202,13 @@ static void can_virtio_check_bus_off(const struct device *dev)
 	data->common.started = false;
 	LOG_WRN("device reports bus-off");
 
+#ifdef CAN_VIRTIO_STATE_CB_LIST
+	can_fire_state_change_callbacks(dev, CAN_STATE_BUS_OFF, err_cnt);
+#else
 	if (cb != NULL) {
 		cb(dev, CAN_STATE_BUS_OFF, err_cnt, data->common.state_change_cb_user_data);
 	}
+#endif
 }
 
 /* --- Transmission ------------------------------------------------------ */
@@ -729,6 +746,7 @@ static int can_virtio_get_state(const struct device *dev, enum can_state *state,
 	return 0;
 }
 
+#ifndef CAN_VIRTIO_STATE_CB_LIST
 static void can_virtio_set_state_change_callback(const struct device *dev,
 						 can_state_change_callback_t cb, void *user_data)
 {
@@ -737,6 +755,7 @@ static void can_virtio_set_state_change_callback(const struct device *dev,
 	data->common.state_change_cb = cb;
 	data->common.state_change_cb_user_data = user_data;
 }
+#endif
 
 static int can_virtio_get_core_clock(const struct device *dev, uint32_t *rate)
 {
@@ -758,7 +777,9 @@ static DEVICE_API(can, can_virtio_driver_api) = {
 	.add_rx_filter = can_virtio_add_rx_filter,
 	.remove_rx_filter = can_virtio_remove_rx_filter,
 	.get_state = can_virtio_get_state,
+#ifndef CAN_VIRTIO_STATE_CB_LIST
 	.set_state_change_callback = can_virtio_set_state_change_callback,
+#endif
 	.get_core_clock = can_virtio_get_core_clock,
 	.get_max_filters = can_virtio_get_max_filters,
 	/* Recommended configuration ranges from CiA 601-2 */
@@ -823,6 +844,9 @@ static int can_virtio_init(const struct device *dev)
 		return -ENODEV;
 	}
 
+#ifdef CAN_VIRTIO_STATE_CB_LIST
+	sys_slist_init(&data->common.state_change_callbacks);
+#endif
 	k_mutex_init(&data->ctrl_mtx);
 	k_sem_init(&data->ctrl_done, 0, 1);
 

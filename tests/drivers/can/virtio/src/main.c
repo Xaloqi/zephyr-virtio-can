@@ -11,6 +11,7 @@
 #include <zephyr/drivers/can.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/ztest.h>
+#include <zephyr/version.h>
 #include "fake_virtio.h"
 
 #define QTX   0
@@ -148,12 +149,61 @@ static void tx_cb(const struct device *dev, int error, void *user_data)
 static enum can_state last_state = -1;
 static int state_calls;
 
+/*
+ * Zephyr 4.5 replaced can_set_state_change_callback() (deprecated, an error under
+ * -Werror) with a list of caller-owned callbacks. Same gate as drivers/can/can_virtio.c.
+ */
+#if ZEPHYR_VERSION_CODE >= ZEPHYR_VERSION(4, 5, 0)
+#define STATE_CB_LIST 1
+static struct can_state_change_callback cb_a, cb_b;
+static int state_calls_b;
+
+static void state_cb(const struct device *dev, struct can_state_change_callback *cb,
+		     enum can_state state, struct can_bus_err_cnt ec)
+{
+	last_state = state;
+	state_calls++;
+}
+
+static void state_cb_b(const struct device *dev, struct can_state_change_callback *cb,
+		       enum can_state state, struct can_bus_err_cnt ec)
+{
+	state_calls_b++;
+}
+
+/* Two callbacks, so that a driver reporting to only one of them is caught. */
+static void state_cb_register(void)
+{
+	state_calls_b = 0;
+	can_init_state_change_callback(&cb_a, state_cb);
+	can_init_state_change_callback(&cb_b, state_cb_b);
+	zassert_ok(can_add_state_change_callback(can, &cb_a));
+	zassert_ok(can_add_state_change_callback(can, &cb_b));
+}
+
+static void state_cb_unregister(void)
+{
+	zassert_ok(can_remove_state_change_callback(can, &cb_a));
+	zassert_ok(can_remove_state_change_callback(can, &cb_b));
+}
+#else
 static void state_cb(const struct device *dev, enum can_state state, struct can_bus_err_cnt ec,
 		     void *user_data)
 {
 	last_state = state;
 	state_calls++;
 }
+
+static void state_cb_register(void)
+{
+	can_set_state_change_callback(can, state_cb, NULL);
+}
+
+static void state_cb_unregister(void)
+{
+	can_set_state_change_callback(can, NULL, NULL);
+}
+#endif
 
 static void reset_fixture(void *f)
 {
@@ -172,6 +222,8 @@ static void reset_fixture(void *f)
 
 static void *suite_setup(void)
 {
+	TC_PRINT("Zephyr %s, ZEPHYR_VERSION_CODE %#x, state change callbacks: %s\n", KERNEL_VERSION_STRING,
+		 ZEPHYR_VERSION_CODE, IS_ENABLED(STATE_CB_LIST) ? "list (4.5)" : "single (4.4)");
 	k_sem_init(&txcb_sem, 0, 32);
 	fake_virtio_set_notify_hook(notify_hook);
 	return NULL;
@@ -467,7 +519,7 @@ ZTEST(can_virtio, test_bus_off)
 	struct can_frame f = {.id = 0x30, .dlc = 1};
 	enum can_state st;
 
-	can_set_state_change_callback(can, state_cb, NULL);
+	state_cb_register();
 	start();
 	state_calls = 0;
 	fake_virtio_config_status = sys_cpu_to_le16(1); /* VIRTIO_CAN_S_CTRL_BUSOFF */
@@ -477,10 +529,13 @@ ZTEST(can_virtio, test_bus_off)
 	zassert_equal(txcb_err, -ENETUNREACH);
 	zassert_equal(state_calls, 1);
 	zassert_equal(last_state, CAN_STATE_BUS_OFF);
+#ifdef STATE_CB_LIST
+	zassert_equal(state_calls_b, 1, "every registered callback must fire");
+#endif
 	zassert_ok(can_get_state(can, &st, NULL));
 	zassert_equal(st, CAN_STATE_BUS_OFF);
 	zassert_equal(can_send(can, &f, K_NO_WAIT, NULL, NULL), -ENETDOWN, "stopped after bus-off");
-	can_set_state_change_callback(can, NULL, NULL);
+	state_cb_unregister();
 	tx_result = 0;
 	fake_virtio_config_status = 0;
 }

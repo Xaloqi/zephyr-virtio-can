@@ -30,6 +30,7 @@ permissions:
 env:
   ZREV: ${{ inputs.zephyr_rev || 'main' }}
   OUT: ${{ github.workspace }}/ci-out
+  # Adding or removing a test: update these (and see CONTRIBUTING.md).
   EXPECT_TEST_CONFIGS: "3"    # tests/drivers/can/virtio: base, fd, no_rtr
   EXPECT_TEST_CASES: "40"
   EXPECT_SAMPLE_CONFIGS: "1"  # samples/xenvm_selftest, build only
@@ -56,7 +57,9 @@ jobs:
           python3 -m venv .venv && . .venv/bin/activate
           pip install -q west
           # Same manifest, Zephyr's revision overridden (main unless dispatched with another ref) for this job only; west.yml is untouched.
-          sed "s|revision: 1f6485eca25431b5ff27ce9a754218c9e559bbbb.*|revision: $ZREV|" \
+          # On Zephyr 4.5 the Xen public headers (xenvm sample) come from the zephyr-xenlib
+          # module; import just that project, at the revision Zephyr's own west.yml pins.
+          sed "s|revision: 1f6485eca25431b5ff27ce9a754218c9e559bbbb.*|revision: $ZREV\n      import:\n        name-allowlist: [zephyr-xenlib]|" \
             zephyr-virtio-can/west.yml > zephyr-virtio-can/west-main.yml
           grep -q "^ *revision: $ZREV\$" zephyr-virtio-can/west-main.yml || { echo "::error::revision override did not apply"; exit 1; }
           west init -l --mf west-main.yml zephyr-virtio-can

@@ -1,8 +1,18 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (2026-10-25)
 
-- CI: a weekly, report-only job builds and tests the driver against Zephyr `main` (SDK version taken from that tree, checksums from the SDK release), and keeps one tracking issue while it fails. The v4.4.1 job is unchanged and remains the release gate.
+- Supports Zephyr 4.5's multiple state-change callbacks (`can_add_state_change_callback()`),
+  alongside Zephyr 4.4.x, from one source. Closes #4. On 4.5 bus-off is reported with
+  `can_fire_state_change_callbacks()`, and the driver no longer implements the removed
+  `.set_state_change_callback` hook. There is no behaviour change on 4.4.x (same object code).
+  The optional `.state_change_callbacks_enabled` hook is not needed: the device delivers no
+  state-change interrupt, so there is nothing to enable or disable.
+- Tests use the callback list on 4.5 (two callbacks, both must fire) and the old call on 4.4.
+- CI: the weekly, report-only job builds and tests against Zephyr `main` (SDK version taken
+  from that tree, checksums from the SDK release) and keeps one tracking issue while it fails.
+  The v4.4.1 job is unchanged and remains the release gate. CONTRIBUTING.md says when to
+  update the job's expected test counts.
 
 ## 0.1.0 (2026-10-23)
 
