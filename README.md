@@ -14,6 +14,7 @@ and reports are welcome.
   driver was written from that text.
 - **Zephyr:** v4.4.1. It is built on Zephyr's virtio framework (`virtio_mmio` /
   `virtio_pci`, `virtqueue`).
+  CI gates on v4.4.1; a weekly job also builds and tests against Zephyr `main` ([![zephyr main weekly](https://github.com/Xaloqi/zephyr-virtio-can/actions/workflows/zephyr-main-weekly.yml/badge.svg)](https://github.com/Xaloqi/zephyr-virtio-can/actions/workflows/zephyr-main-weekly.yml)), report-only.
 - **Licence:** Apache-2.0.
 
 ## Use

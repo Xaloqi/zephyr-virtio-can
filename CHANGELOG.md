@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- CI: a weekly, report-only job builds and tests the driver against Zephyr `main` (SDK version taken from that tree, checksums from the SDK release), and keeps one tracking issue while it fails. The v4.4.1 job is unchanged and remains the release gate.
+
 ## 0.1.0 (2026-10-23)
 
 First tagged release, experimental. VIRTIO 1.4 CAN device driver for Zephyr v4.4.1:
