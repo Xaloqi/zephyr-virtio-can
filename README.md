@@ -5,7 +5,7 @@ module. A Zephyr guest gets a CAN controller whose bus is owned by the device si
 typically a driver domain under a hypervisor. Applications use the standard Zephyr CAN
 API (`can_send()`, `can_add_rx_filter*()`, ISO-TP), so they run unchanged.
 
-**Status: experimental, 0.1.0.** It has been unit-tested, and run end-to-end in one setup
+**Status: experimental, 0.2.0.** It has been unit-tested, and run end-to-end in one setup
 (below). It has not run on hardware, and nobody outside Xaloqi has reviewed it yet. Issues
 and reports are welcome.
 
